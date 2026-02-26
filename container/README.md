@@ -65,7 +65,7 @@ aws ecs run-task \
   --task-definition triage-agent \
   --launch-type FARGATE \
   --network-configuration 'awsvpcConfiguration={subnets=[SUBNET_ID],securityGroups=[SG_ID],assignPublicIp=DISABLED}' \
-  --profile dev-data-gen.admin --region us-west-2
+  --profile $AWS_PROFILE --region $AWS_REGION
 ```
 
 Get the subnet and security group IDs from `terraform output`.

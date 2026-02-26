@@ -20,7 +20,7 @@ for var in ANTHROPIC_API_KEY SCANNER_MCP_URL SCANNER_MCP_API_KEY SLACK_BOT_TOKEN
 done
 
 AWS_REGION="${AWS_REGION:-us-west-2}"
-AWS_PROFILE="${AWS_PROFILE:-dev-data-gen.admin}"
+AWS_PROFILE="${AWS_PROFILE:?Set AWS_PROFILE in .env}"
 TF_VARS=(
   -var="anthropic_api_key=$ANTHROPIC_API_KEY"
   -var="scanner_mcp_url=$SCANNER_MCP_URL"

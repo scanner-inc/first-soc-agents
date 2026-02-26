@@ -25,7 +25,7 @@ if [ ! -f ".env" ]; then
 fi
 
 # Check AWS auth
-AWS_PROFILE="${AWS_PROFILE:-dev-data-gen.admin}"
+AWS_PROFILE="${AWS_PROFILE:?Set AWS_PROFILE in .env}"
 echo "Checking AWS auth (profile: $AWS_PROFILE)..."
 if aws sts get-caller-identity --profile "$AWS_PROFILE" > /dev/null 2>&1; then
     echo "AWS auth OK: $(aws sts get-caller-identity --profile "$AWS_PROFILE" --query 'Account' --output text)"

@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
-AWS_PROFILE="${AWS_PROFILE:-dev-data-gen.admin}"
+AWS_PROFILE="${AWS_PROFILE:?Set AWS_PROFILE in .env}"
 
 echo "=== Tearing down ALL Part 2 infrastructure ==="
 echo "WARNING: This will destroy Lambda, ECS, VPC, NAT gateway, and all related resources."

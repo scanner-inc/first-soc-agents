@@ -48,7 +48,7 @@ This handles the full pipeline: ECR repo creation, TypeScript build, Docker buil
 ```bash
 aws lambda invoke --function-name soc-triage-agent \
   --payload '{"alert_id":"test-001","alert_summary":"Unusual API call from new IP"}' \
-  --profile dev-data-gen.admin --region us-west-2 \
+  --profile $AWS_PROFILE --region $AWS_REGION \
   --cli-binary-format raw-in-base64-out \
   --cli-read-timeout 900 \
   /tmp/output.json && cat /tmp/output.json | jq .body -r | jq .

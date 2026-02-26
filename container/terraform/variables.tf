@@ -3,7 +3,7 @@ variable "aws_region" {
 }
 
 variable "aws_profile" {
-  default = "dev-data-gen.admin"
+  type = string
 }
 
 variable "anthropic_api_key" {
