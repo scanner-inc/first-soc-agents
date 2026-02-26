@@ -16,6 +16,8 @@ Companion code for the blog series: [Building Your First SOC Agents](https://sca
 - AWS CLI (configured with appropriate permissions)
 - An [Anthropic API key](https://console.anthropic.com/)
 - A [Scanner](https://scanner.dev) account with MCP access
+- An [AlienVault OTX](https://otx.alienvault.com/) API key (free)
+- An [abuse.ch](https://abuse.ch/) auth key (free)
 
 ## Quick Start
 
