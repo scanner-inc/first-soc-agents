@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+.terraform.lock.hcl
+__pycache__/
+.pytest_cache/
+.env
+deploy.zip
