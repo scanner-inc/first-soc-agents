@@ -21,3 +21,14 @@ output "log_group" {
 output "ecr_repository_url" {
   value = aws_ecr_repository.triage.repository_url
 }
+
+output "webhook_url" {
+  description = "POST alerts to this URL with x-api-key header"
+  value       = "${aws_api_gateway_stage.v1.invoke_url}/alerts"
+}
+
+output "webhook_api_key" {
+  description = "API key for webhook authentication (use in x-api-key header)"
+  value       = aws_api_gateway_api_key.webhook.value
+  sensitive   = true
+}

@@ -22,6 +22,7 @@ done
 AWS_REGION="${AWS_REGION:-us-west-2}"
 AWS_PROFILE="${AWS_PROFILE:?Set AWS_PROFILE in .env}"
 TF_VARS=(
+  -var="aws_profile=$AWS_PROFILE"
   -var="anthropic_api_key=$ANTHROPIC_API_KEY"
   -var="scanner_mcp_url=$SCANNER_MCP_URL"
   -var="scanner_mcp_api_key=$SCANNER_MCP_API_KEY"

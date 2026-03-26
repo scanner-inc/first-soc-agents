@@ -26,3 +26,10 @@ variable "model" {
   type    = string
   default = "claude-opus-4-6"
 }
+
+variable "webhook_api_key" {
+  description = "API key for webhook authentication. If empty, AWS generates one automatically."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
