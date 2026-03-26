@@ -90,6 +90,10 @@ resource "aws_lambda_function" "triage" {
       SCANNER_MCP_URL     = var.scanner_mcp_url
       SCANNER_MCP_API_KEY = var.scanner_mcp_api_key
       MODEL               = var.model
+      SLACK_BOT_TOKEN     = var.slack_bot_token
+      SLACK_TEAM_ID       = var.slack_team_id
+      SLACK_CHANNEL_ID    = var.slack_channel_id
+      SLACK_CHANNEL_NAME  = var.slack_channel_name
     }
   }
 

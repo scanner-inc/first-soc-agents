@@ -1,6 +1,6 @@
 // handler.ts — Lambda function using @anthropic-ai/claude-agent-sdk
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import type { McpHttpServerConfig } from "@anthropic-ai/claude-agent-sdk";
+import type { McpHttpServerConfig, McpStdioServerConfig } from "@anthropic-ai/claude-agent-sdk";
 import type { Handler } from "aws-lambda";
 
 // Allow running inside another Claude Code session (e.g., during testing)
@@ -57,7 +57,52 @@ the following methodology:
    - What would change your classification?
    Revise your assessment if the critique reveals weaknesses.
 
-Respond with a JSON object:
+**Phase 5: Post Investigation to Slack**
+9. Post your findings to the Slack channel using this template:
+
+🚨 *Security Alert Investigation*
+
+*Alert ID*: [The alert_id provided]
+*Alert*: [Name] | Severity: [Level]
+
+*TL;DR*: [2 sentence summary: First sentence describes what was detected and the classification. Second sentence states the key finding and recommended action.]
+
+*Classification*: [🟢 BENIGN / 🟡 SUSPICIOUS / 🔴 MALICIOUS]
+*Confidence*: [XX%] ([High/Medium/Low])
+
+*Timeline*:
+• \`[Timestamp]\` - [First relevant event in the investigation window]
+• \`[Timestamp]\` - [Subsequent event]
+• \`[Timestamp]\` - *Alert triggered*: [The detection event]
+• \`[Timestamp]\` - [Any post-alert activity observed]
+
+*Hypothesis Testing*:
+✓ [Confirmed hypothesis with brief reasoning]
+✗ [Ruled out alternative 1]
+✗ [Ruled out alternative 2]
+
+*Key Evidence*:
+• Finding 1 with \`technical details\` and timestamp
+• Finding 2 with \`code formatting\` for IPs/users
+• Finding 3
+
+> [Use blockquote for most critical evidence or context]
+
+*MITRE ATT&CK*: [Only if MALICIOUS - list tactics and techniques like T1078, T1098]
+
+*Recommended Next Questions*:
+• [Question an analyst should ask to further validate or investigate]
+• [Question about gaps or unknowns]
+• [Question about broader context]
+
+**Slack Formatting Rules**:
+- Use *bold* (single asterisk, not double)
+- Use \`code\` for IPs, usernames, file paths, commands
+- Use > for blockquotes/important notes
+- Use ✓ ✗ for hypothesis results
+- Add line breaks between sections for readability
+
+After posting to Slack, respond with a JSON object:
 {
     "classification": "BENIGN|SUSPICIOUS|MALICIOUS",
     "confidence": "high|medium|low",
@@ -94,19 +139,35 @@ Notes on fields:
   to access this system?", "Was there a change ticket for this access?", "Does this IP belong
   to a known VPN provider?" Questions acknowledge uncertainty and keep the analyst in control.`;
 
-function scannerMcpConfig(): Record<string, McpHttpServerConfig> {
-  const url = process.env.SCANNER_MCP_URL;
-  if (!url) return {};
+function mcpServerConfig(): Record<string, McpHttpServerConfig | McpStdioServerConfig> {
+  const servers: Record<string, McpHttpServerConfig | McpStdioServerConfig> = {};
 
-  return {
-    scanner: {
+  const scannerUrl = process.env.SCANNER_MCP_URL;
+  if (scannerUrl) {
+    servers.scanner = {
       type: "http",
-      url,
+      url: scannerUrl,
       headers: {
         Authorization: `Bearer ${process.env.SCANNER_MCP_API_KEY || ""}`,
       },
-    },
-  };
+    };
+  }
+
+  const slackBotToken = process.env.SLACK_BOT_TOKEN;
+  const slackTeamId = process.env.SLACK_TEAM_ID;
+  if (slackBotToken && slackTeamId) {
+    servers.slack = {
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-slack"],
+      env: {
+        SLACK_BOT_TOKEN: slackBotToken,
+        SLACK_TEAM_ID: slackTeamId,
+      },
+    };
+  }
+
+  return servers;
 }
 
 export function extractJson(text: string): Record<string, unknown> {
@@ -146,23 +207,35 @@ export const handler: Handler = async (rawEvent) => {
       ? JSON.parse(rawEvent.Records[0].body)
       : rawEvent;
 
-  const { alert_id, alert_summary } = event;
+  const alertId = event.id || "unknown";
 
-  if (!alert_id || !alert_summary) {
+  if (!event.id) {
+    console.log(JSON.stringify({ error: "Missing detection event id", event }));
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: "Missing alert_id or alert_summary" }),
+      body: JSON.stringify({ error: "Missing detection event id" }),
     };
   }
 
   const start = Date.now();
 
   try {
-    const mcpServers = scannerMcpConfig();
-    const allowedTools = Object.keys(mcpServers).length > 0 ? ["mcp__scanner__*"] : [];
+    const mcpServers = mcpServerConfig();
+    const allowedTools: string[] = [];
+    if (mcpServers.scanner) allowedTools.push("mcp__scanner__*");
+    if (mcpServers.slack) allowedTools.push("mcp__slack__slack_post_message", "mcp__slack__slack_list_channels");
+
+    const channelIds = (process.env.SLACK_CHANNEL_ID || "").split(",").map(s => s.trim()).filter(Boolean);
+    const channelNames = (process.env.SLACK_CHANNEL_NAME || "").split(",").map(s => s.trim()).filter(Boolean);
+    const channels = channelIds.map((id, i) => `#${channelNames[i] || id} (channel ID: ${id})`);
+    const slackInstruction = channels.length > 0
+      ? `\n\nPost your findings to each of these Slack channels: ${channels.join(", ")}.`
+      : "";
+
+    const eventJson = JSON.stringify(event, null, 2);
 
     const q = query({
-      prompt: `Triage this alert.\n\n**Alert ID**: ${alert_id}\n**Summary**: ${alert_summary}`,
+      prompt: `Triage this detection alert.\n\n${eventJson}${slackInstruction}`,
       options: {
         model: process.env.MODEL || "claude-opus-4-6",
         systemPrompt: SYSTEM_PROMPT,
@@ -179,7 +252,7 @@ export const handler: Handler = async (rawEvent) => {
         for (const block of message.message.content) {
           if (block.type === "tool_use") {
             console.log(JSON.stringify({
-              alert_id,
+              alertId,
               step: "tool_call",
               tool: block.name,
               input: block.input,
@@ -196,7 +269,7 @@ export const handler: Handler = async (rawEvent) => {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          alert_id,
+          alertId,
           result: {
             classification: "SUSPICIOUS",
             confidence: "low",
@@ -213,7 +286,7 @@ export const handler: Handler = async (rawEvent) => {
 
     console.log(
       JSON.stringify({
-        alert_id,
+        alertId,
         classification: result.classification,
         confidence: result.confidence,
         duration_ms: durationMs,
@@ -223,14 +296,14 @@ export const handler: Handler = async (rawEvent) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ alert_id, result }),
+      body: JSON.stringify({ alertId, result }),
     };
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e);
-    console.log(JSON.stringify({ alert_id, error }));
+    console.log(JSON.stringify({ alertId, error }));
     return {
       statusCode: 500,
-      body: JSON.stringify({ alert_id, error }),
+      body: JSON.stringify({ alertId, error }),
     };
   }
 };

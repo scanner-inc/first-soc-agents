@@ -27,6 +27,27 @@ variable "model" {
   default = "claude-opus-4-6"
 }
 
+variable "slack_bot_token" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "slack_team_id" {
+  type    = string
+  default = ""
+}
+
+variable "slack_channel_id" {
+  type    = string
+  default = ""
+}
+
+variable "slack_channel_name" {
+  type    = string
+  default = ""
+}
+
 variable "webhook_api_key" {
   description = "API key for webhook authentication. If empty, AWS generates one automatically."
   type        = string

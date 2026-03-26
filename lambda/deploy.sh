@@ -26,6 +26,10 @@ TF_VARS=(
   -var="anthropic_api_key=$ANTHROPIC_API_KEY"
   -var="scanner_mcp_url=$SCANNER_MCP_URL"
   -var="scanner_mcp_api_key=$SCANNER_MCP_API_KEY"
+  -var="slack_bot_token=${SLACK_BOT_TOKEN:-}"
+  -var="slack_team_id=${SLACK_TEAM_ID:-}"
+  -var="slack_channel_id=${SLACK_CHANNEL_ID:-}"
+  -var="slack_channel_name=${SLACK_CHANNEL_NAME:-}"
 )
 
 # Step 1: Ensure ECR repo exists (targeted apply)
